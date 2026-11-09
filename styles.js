@@ -266,6 +266,43 @@ const styles = {
     }
   },
   optText: { minWidth: 0, overflowWrap: 'anywhere' },
+
+  /* ---------- Instant feedback after marking an answer ---------- */
+  '@keyframes shake': {
+    '0%, 100%': { transform: 'translateY(4px)' },
+    '20%': { transform: 'translateY(4px) translateX(-8px) rotateY(-8deg)' },
+    '40%': { transform: 'translateY(4px) translateX(7px) rotateY(6deg)' },
+    '60%': { transform: 'translateY(4px) translateX(-5px)' },
+    '80%': { transform: 'translateY(4px) translateX(3px)' }
+  },
+  '@keyframes popOk': { '0%': { transform: 'translateY(4px) scale(1)' }, '45%': { transform: 'translateY(0) scale(1.03)' }, '100%': { transform: 'translateY(4px) scale(1)' } },
+  '@keyframes fbIn': { from: { opacity: 0, transform: 'perspective(800px) rotateX(-40deg) translateY(-12px)' }, to: { opacity: 1, transform: 'none' } },
+  locked: { pointerEvents: 'none' },  /* once marked, the answer can't be changed */
+  result: {
+    '&::after': { marginLeft: 'auto', paddingLeft: '10px', fontFamily: F_MONO, fontSize: '11px', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', whiteSpace: 'nowrap' },
+    '& $bubble::after': { content: 'var(--icon)', display: 'grid', placeItems: 'center', background: 'var(--tone)', color: 'var(--on-form)', fontSize: '14px', fontWeight: 700, animation: `$fill 260ms ${SPRING} both` },
+    '&[aria-checked="true"] $bubble::after': { content: 'var(--icon)' },
+    '& $bubble': { borderColor: 'var(--tone)' }
+  },
+  rCorrect: { '--tone': 'var(--ok)', '--icon': '"✓"', borderColor: 'var(--ok) !important', background: 'var(--ok-soft) !important', boxShadow: '0 1px 0 var(--ok) !important', animation: '$popOk 440ms ease both', '&::after': { content: '"Correct"', color: 'var(--ok)' } },
+  rPartial: { '--tone': 'var(--part)', '--icon': '"½"', borderColor: 'var(--part) !important', background: 'var(--part-soft) !important', boxShadow: '0 1px 0 var(--part) !important', animation: '$shake 480ms ease both', '&::after': { content: '"Your answer"', color: 'var(--part)' } },
+  rWrong: { '--tone': 'var(--bad)', '--icon': '"✕"', borderColor: 'var(--bad) !important', background: 'var(--bad-soft) !important', boxShadow: '0 1px 0 var(--bad) !important', animation: '$shake 480ms ease both', '&::after': { content: '"Your answer"', color: 'var(--bad)' } },
+  rKey: { '--tone': 'var(--ok)', '--icon': '"✓"', borderColor: 'var(--ok) !important', background: 'var(--ok-soft) !important', boxShadow: '0 5px 0 rgba(74,222,154,.35) !important', '&::after': { content: '"Correct answer"', color: 'var(--ok)' } },
+  rDim: { opacity: 0.45 },
+  feedback: {
+    position: 'relative', marginTop: '16px', borderRadius: '12px', border: '1.5px solid var(--tone)', background: 'var(--tone-soft)',
+    padding: '12px 14px 12px 19px', display: 'flex', flexDirection: 'column', gap: '8px', overflow: 'hidden',
+    animation: `$fbIn 440ms ${EASE} both`, transformOrigin: 'top center',
+    '&::before': { content: '""', position: 'absolute', left: 0, top: 0, bottom: 0, width: '5px', background: 'var(--tone)' }
+  },
+  fbHead: { display: 'flex', alignItems: 'center', gap: '10px', '& b': { fontFamily: F_DISPLAY, fontSize: '19px', color: 'var(--tone)', letterSpacing: '-0.01em' } },
+  fbIcon: { width: '28px', height: '28px', borderRadius: '50%', display: 'grid', placeItems: 'center', background: 'var(--tone)', color: 'var(--on-form)', fontWeight: 700, fontSize: '14px', boxShadow: '0 3px 0 rgba(0,0,0,.3)' },
+  fbPts: { marginLeft: 'auto', fontFamily: F_MONO, fontSize: '13px', fontWeight: 600, color: 'var(--tone)', fontVariantNumeric: 'tabular-nums' },
+  fbRow: {
+    display: 'grid', gap: '2px', fontSize: '15px', padding: '8px 11px', borderRadius: '8px', background: 'rgba(0,0,0,.2)', overflowWrap: 'anywhere',
+    '& span': { fontFamily: F_MONO, fontSize: '10.5px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ink-2)' }
+  },
+  fbKey: { background: 'var(--ok-soft)', border: '1px solid var(--ok)', '& span': { color: 'var(--ok)' } },
   navRow: { display: 'flex', justifyContent: 'space-between', gap: '10px', marginTop: '24px', alignItems: 'center' },
   kbd: { fontFamily: F_MONO, fontSize: '11.5px', color: 'var(--ink-2)' },
   kbdHint: { '@media (max-width: 600px)': { display: 'none' } },

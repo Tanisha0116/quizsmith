@@ -245,9 +245,10 @@ function renderQuiz() {
           <span class="${c.chip}">Partial credit possible</span>
         </div>
         <h2 class="${c.qText}" id="qtext">${esc(q.q)}</h2>
-        <ul class="${c.opts}" role="radiogroup" aria-labelledby="qtext">
-          ${q.opts.map((o, j) => `<li><button type="button" class="${c.opt}" role="radio" data-opt="${j}" aria-checked="${S.answers[S.i] === j}"><span class="${c.bubble}" aria-hidden="true">${LETTERS[j]}</span><span class="${c.optText}">${esc(o.t)}</span></button></li>`).join('')}
+        <ul class="${c.opts}${S.answers[S.i] != null ? ' ' + c.locked : ''}" role="radiogroup" aria-labelledby="qtext">
+          ${q.opts.map((o, j) => `<li><button type="button" class="${c.opt} ${resultClass(q, j, S.answers[S.i])}" role="radio" data-opt="${j}" aria-checked="${S.answers[S.i] === j}"><span class="${c.bubble}" aria-hidden="true">${LETTERS[j]}</span><span class="${c.optText}">${esc(o.t)}</span></button></li>`).join('')}
         </ul>
+        <div id="feedback" aria-live="polite">${S.answers[S.i] != null ? feedbackHTML(q, S.answers[S.i]) : ''}</div>
       </div>
       <div class="${c.navRow}">
         <button type="button" class="${c.btn} ${c.ghost}" id="back" ${S.i === 0 ? 'disabled' : ''}>← Back</button>
@@ -267,10 +268,41 @@ function nextLabel() {
   if (S.i < S.quiz.length - 1) return 'Next →';
   return S.answers.every(a => a != null) ? 'Grade my sheet' : 'Finish (blanks score 0)';
 }
+/* ---------- instant feedback: shown the moment an answer is marked ---------- */
+const statusOf = o => o.w === 1 ? 'correct' : o.w > 0 ? 'partial' : 'wrong';
+function resultClass(q, j, pick) {
+  if (pick == null) return '';
+  const o = q.opts[j];
+  if (j === pick) return `${c.result} ${{ correct: c.rCorrect, partial: c.rPartial, wrong: c.rWrong }[statusOf(o)]}`;
+  if (o.w === 1) return `${c.result} ${c.rKey}`;   // highlight the right answer when you missed it
+  return c.rDim;
+}
+function feedbackHTML(q, pick) {
+  const o = q.opts[pick], st = statusOf(o), best = q.opts.find(x => x.w === 1);
+  const [tc, ts] = tone(st);
+  const title = { correct: 'Correct!', partial: 'Partly right', wrong: 'Incorrect' }[st];
+  return `<div class="${c.feedback}" style="--tone:${tc};--tone-soft:${ts}">
+    <div class="${c.fbHead}"><span class="${c.fbIcon}" aria-hidden="true">${ICON[st]}</span><b>${title}</b><span class="${c.fbPts}">+${fmt(o.w * q.d)}/${q.d} pts</span></div>
+    ${st !== 'correct' ? `<div class="${c.fbRow}"><span>Your answer</span>${esc(o.t)}</div>
+    <div class="${c.fbRow} ${c.fbKey}"><span>Correct answer</span>${esc(best.t)}</div>` : ''}
+    <p class="${c.expl}">${esc(q.x)}</p>
+  </div>`;
+}
+
 function choose(j) {
+  if (S.answers[S.i] != null) return;   // an answer is locked once marked
   S.answers[S.i] = j;
-  App.haptic();
-  app.querySelectorAll('[data-opt]').forEach(b => b.setAttribute('aria-checked', String(+b.dataset.opt === j)));
+  const q = S.quiz[S.i];
+  App.haptic(statusOf(q.opts[j]));
+  app.querySelector('[role="radiogroup"]').classList.add(c.locked);
+  app.querySelectorAll('[data-opt]').forEach(b => {
+    const k = +b.dataset.opt;
+    b.setAttribute('aria-checked', String(k === j));
+    const extra = resultClass(q, k, j);
+    if (extra) b.className += ' ' + extra;
+  });
+  app.querySelector('#feedback').innerHTML = feedbackHTML(q, j);
+  setTimeout(() => { const nb = app.querySelector('#next'); if (nb) nb.scrollIntoView({ behavior: REDUCE ? 'auto' : 'smooth', block: 'nearest' }); }, 120);
   const nextBtn = app.querySelector('#next');
   nextBtn.disabled = false; delete nextBtn.dataset.confirm; nextBtn.textContent = nextLabel();
   app.querySelector('#marked').textContent = `${S.answers.filter(a => a != null).length}/${S.quiz.length} marked`;
@@ -557,7 +589,9 @@ const App = (function () {
       if (err && err.name !== 'AbortError') toast('Sharing didn’t work here. Use Copy result text instead.');
     });
   }
-  function haptic() { try { if (navigator.vibrate) navigator.vibrate(8); } catch (e) { /* ignore */ } }
+  function haptic(status) {   // short buzz for correct, double buzz for wrong (Android)
+    try { if (navigator.vibrate) navigator.vibrate(status === 'correct' ? 15 : status === 'partial' ? [20, 50, 20] : [35, 60, 35]); } catch (e) { /* ignore */ }
+  }
 
   /* Android / browser back button: step back a question, or return to setup */
   function syncHistory() {
@@ -577,6 +611,12 @@ const App = (function () {
   /* offline support: register the service worker when served over https (or localhost) */
   if (window.QUIZSMITH_APP && 'serviceWorker' in navigator && (location.protocol === 'https:' || /^(localhost|127\.0\.0\.1)$/.test(location.hostname))) {
     window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => { /* offline mode unavailable */ }); });
+    // when a new version is published, reload once so the installed app updates itself
+    const hadController = !!navigator.serviceWorker.controller;
+    let reloaded = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (hadController && !reloaded && S.screen === 'setup') { reloaded = true; location.reload(); }
+    });
   }
   return { afterRender, refresh, share, canShare, haptic };
 })();

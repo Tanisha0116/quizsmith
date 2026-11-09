@@ -1,38 +1,43 @@
 /* =========================================================
    QUIZSMITH · SERVICE WORKER
-   Caches the whole app on first visit so it opens and works
-   with no internet. To ship an update, change VERSION: every
-   installed copy downloads the new files on its next launch.
+   Saves the whole app on first visit so it works with no
+   internet. When online it always loads the newest files, so
+   updates appear straight away. Change VERSION when you update.
    ========================================================= */
-const VERSION = 'quizsmith-v1.0.1';
+const VERSION = 'quizsmith-v1.0.5';
 const ASSETS = [
   './',
   'index.html',
   'manifest.webmanifest',
-  'js/questions.js',
-  'js/styles.js',
-  'js/app.js',
-  'vendor/jss.min.js',
-  'vendor/jss-preset-default.min.js',
-  'fonts/fonts.css',
-  'fonts/bricolage-grotesque-latin-500-normal.woff2',
-  'fonts/bricolage-grotesque-latin-700-normal.woff2',
-  'fonts/bricolage-grotesque-latin-800-normal.woff2',
-  'fonts/atkinson-hyperlegible-latin-400-normal.woff2',
-  'fonts/atkinson-hyperlegible-latin-700-normal.woff2',
-  'fonts/ibm-plex-mono-latin-500-normal.woff2',
-  'fonts/ibm-plex-mono-latin-600-normal.woff2',
-  'icons/icon.svg',
-  'icons/favicon-32.png',
-  'icons/icon-192.png',
-  'icons/icon-512.png',
-  'icons/maskable-192.png',
-  'icons/maskable-512.png',
-  'icons/apple-touch-icon.png'
+  'questions.js',
+  'styles.js',
+  'app.js',
+  'jss.min.js',
+  'jss-preset-default.min.js',
+  'fonts.css',
+  'bricolage-grotesque-latin-500-normal.woff2',
+  'bricolage-grotesque-latin-700-normal.woff2',
+  'bricolage-grotesque-latin-800-normal.woff2',
+  'atkinson-hyperlegible-latin-400-normal.woff2',
+  'atkinson-hyperlegible-latin-700-normal.woff2',
+  'ibm-plex-mono-latin-500-normal.woff2',
+  'ibm-plex-mono-latin-600-normal.woff2',
+  'icon.svg',
+  'favicon-32.png',
+  'icon-192.png',
+  'icon-512.png',
+  'maskable-192.png',
+  'maskable-512.png',
+  'apple-touch-icon.png'
 ];
 
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(VERSION).then(cache => cache.addAll(ASSETS)).then(() => self.skipWaiting()));
+  // cache: 'reload' skips Chrome's own file cache, so a new version never saves old files
+  event.waitUntil(
+    caches.open(VERSION)
+      .then(cache => cache.addAll(ASSETS.map(url => new Request(url, { cache: 'reload' }))))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', event => {
@@ -43,17 +48,25 @@ self.addEventListener('activate', event => {
   );
 });
 
-/* Cache first (instant + offline), falling back to the network. Page loads fall back to the cached app. */
+/* Pages, code and styles: NETWORK FIRST, so you always get the newest version when online,
+   and the saved copy when offline. Fonts and icons: CACHE FIRST, since they never change. */
 self.addEventListener('fetch', event => {
   const req = event.request;
-  if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
+  const url = new URL(req.url);
+  if (req.method !== 'GET' || url.origin !== self.location.origin) return;
+  const isStatic = /\.(woff2|png|svg)$/.test(url.pathname);
+
+  if (isStatic) {
+    event.respondWith(caches.match(req, { ignoreSearch: true }).then(hit => hit || fetch(req)));
+    return;
+  }
   event.respondWith(
-    caches.match(req, { ignoreSearch: true }).then(hit => {
-      if (hit) return hit;
-      return fetch(req).then(res => {
+    fetch(req, { cache: 'no-cache' })
+      .then(res => {
         if (res.ok) { const copy = res.clone(); caches.open(VERSION).then(c => c.put(req, copy)); }
         return res;
-      }).catch(() => req.mode === 'navigate' ? caches.match('index.html') : Response.error());
-    })
+      })
+      .catch(() => caches.match(req, { ignoreSearch: true })
+        .then(hit => hit || (req.mode === 'navigate' ? caches.match('index.html') : Response.error())))
   );
 });
