@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Quizsmith</title>
+  <meta name="description" content="Personalised tech quizzes with weighted answers, 3D animated result cards and shareable results.">
+
+  <!-- Installable app (PWA) -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#0A0E1A">
+  <meta name="color-scheme" content="dark">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
+  <!-- iPhone / iPad home-screen app -->
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Quizsmith">
+
+  <!-- Fonts and libraries are bundled locally so the app works offline -->
+  <link rel="stylesheet" href="fonts/fonts.css">
+  <style>
+    /* Pre-JSS fallback so the first frame is never unstyled */
+    :root { color-scheme: dark; }
+    html, body { margin: 0; background: #0A0E1A; color: #E8ECF8; font-family: "Atkinson Hyperlegible", system-ui, sans-serif; }
+  </style>
+  <!-- JSS: CSS-in-JS. The preset adds nesting, $refs, @global, camelCase and default units. -->
+  <script src="vendor/jss.min.js"></script>
+  <script src="vendor/jss-preset-default.min.js"></script>
+</head>
+<body>
+  <div id="app"></div>
+  <script>window.QUIZSMITH_APP = { version: '1.0.1' };</script>
+  <script src="js/questions.js"></script>
+  <script src="js/styles.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
